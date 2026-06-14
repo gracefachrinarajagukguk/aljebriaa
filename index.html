@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathViz - Aljebria</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ==================== 1. CSS VISUAL NOVEL & LOGIN (GERBANG) ==================== */
+        
+        /* INI OBAT BUG-NYA: Tembok solid agar MathViz tidak bocor saat layar transisi memudar */
+        #gerbang-wrapper {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background-color: #1a2a2c; /* Warna hijau gelap solid */
+            z-index: 99998;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .gateway-screen {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background-color: transparent; 
+            z-index: 99999; 
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+            overflow: hidden;
+            font-family: 'Poppins', sans-serif;
+        }
+        .gateway-screen.active { display: block; }
+        .gateway-screen.show { opacity: 1; }
+
+        .gateway-screen img.vn-bg {
+            width: 100%; height: 100%;
+            object-fit: contain;
+            cursor: pointer;
+        }
+
+        .btn-back-vn {
+            position: absolute; top: 20px; left: 20px;
+            padding: 10px 20px; background-color: #5c8d89;
+            color: white; border: none; border-radius: 20px;
+            font-weight: bold; cursor: pointer; z-index: 100;
+            font-family: 'Fredoka', sans-serif; transition: 0.2s;
+        }
+        .btn-back-vn:hover { background-color: #70a6a1; transform: scale(1.05); }
+
+        .area-klik { position: absolute; height: 50%; top: 30%; z-index: 5; cursor: pointer; }
+        .si-b { width: 20%; left: 20%; }
+        .si-a { width: 25%; left: 40%; }
+        .si-c { width: 20%; left: 65%; }
+
+        .btn-login-gerbang {
+            position: absolute; bottom: 30px; left: 50%;
+            transform: translateX(-50%); background: #f7d060;
+            color: #1a2a2c; padding: 15px 30px; font-size: 20px;
+            font-weight: bold; border-radius: 30px; border: none;
+            cursor: pointer; z-index: 10; font-family: 'Fredoka', sans-serif;
+            box-shadow: 0 5px 15px rgba(247, 208, 96, 0.4); transition: 0.3s;
+        }
+        .btn-login-gerbang:hover { background-color: #ffdf85; transform: translateX(-50%) scale(1.05); }
+
+
+        /* ==================== 2. CSS MATHVIZ ASLI ==================== */
+        :root {
+            --bg-grad-start: #667eea;
+            --bg-grad-end: #764ba2;
+            --glass-bg: rgba(255,255,255,0.97);
+            --glass-border: rgba(255,255,255,0.28);
+            --card-bg: #ffffff;
+            --card-bg2: rgba(255,255,255,0.5);
+            --text-main: #1f2937;
+            --text-sub: #4b5563;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --input-bg: #f9fafb;
+            --panel-bg: rgba(249,250,251,1);
+            --info-bg: #fefce8;
+            --info-border: #eab308;
+            --info-text: #78350f;
+            --nav-bg: rgba(255,255,255,0.97);
+            --slider-track: #e5e7eb;
+        }
+        [data-theme="dark"] {
+            --bg-grad-start: #1e1b4b;
+            --bg-grad-end: #312e81;
+            --glass-bg: rgba(17,24,39,0.97);
+            --glass-border: rgba(99,102,241,0.2);
+            --card-bg: #1f2937;
+            --card-bg2: rgba(31,41,55,0.7);
+            --text-main: #f3f4f6;
+            --text-sub: #d1d5db;
+            --text-muted: #9ca3af;
+            --border: #374151;
+            --input-bg: #111827;
+            --panel-bg: #111827;
+            --info-bg: #1c1917;
+            --info-border: #92400e;
+            --info-text: #fde68a;
+            --nav-bg: rgba(17,24,39,0.97);
+            --slider-track: #374151;
+        }
+
+        * { font-family: 'Poppins', sans-serif; transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
+
+        body { background: #0a0a1f; min-height: 100vh; overflow-x: hidden; color: var(--text-main); margin: 0; padding: 0; }
+        [data-theme="light"] body { background: #0d0d2b; }
+
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+        nav, .pt-24, #help-modal { position: relative; z-index: 1; }
+        .glass { background: var(--glass-bg); backdrop-filter: blur(16px); border: 1px solid var(--glass-border); box-shadow: 0 8px 32px rgba(0,0,0,0.35); }
+        .nav-glass { background: var(--nav-bg); backdrop-filter: blur(16px); border-bottom: 1px solid var(--glass-border); box-shadow: 0 2px 20px rgba(0,0,0,0.4); }
+        .card-bg { background: var(--card-bg); }
+        .card-bg2 { background: var(--card-bg2); }
+        .text-main { color: var(--text-main); }
+        .text-sub { color: var(--text-sub); }
+        .text-muted { color: var(--text-muted); }
+        .border-theme { border-color: var(--border); }
+        .input-theme { background: var(--input-bg); color: var(--text-main); border-color: var(--border); }
+        .panel-bg { background: var(--panel-bg); }
+        .info-panel { background: var(--info-bg); border-color: var(--info-border); color: var(--info-text); }
+
+        .floating { animation: float 6s ease-in-out infinite; }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-16px); } }
+        .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+        @keyframes pulse-glow { 0%,100% { box-shadow: 0 0 20px rgba(99,102,241,0.5); } 50% { box-shadow: 0 0 40px rgba(99,102,241,0.9); } }
+        .slide-in { animation: slideIn 0.4s ease-out; }
+        @keyframes slideIn { from { opacity:0; transform: translateY(-12px); } to { opacity:1; transform: translateY(0); } }
+        
+        .particle { position: fixed; pointer-events: none; border-radius: 50%; animation: particle-float 2.5s ease-out forwards; z-index: 9999; }
+        @keyframes particle-float { 0% { transform: translate(0,0) scale(1); opacity:1; } 100% { transform: translate(var(--tx),var(--ty)) scale(0); opacity:0; } }
+        
+        .gradient-text { background: linear-gradient(135deg,#667eea,#764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .tab-active { background: linear-gradient(135deg,#667eea,#764ba2) !important; color: white !important; }
+        
+        input[type="range"] { -webkit-appearance:none; appearance:none; background:transparent; cursor:pointer; width:100%; }
+        input[type="range"]::-webkit-slider-track { background: var(--slider-track); height:6px; border-radius:3px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; background: linear-gradient(135deg,#667eea,#764ba2); height:22px; width:22px; border-radius:50%; margin-top:-8px; box-shadow:0 2px 8px rgba(0,0,0,0.25); transition: transform 0.15s; }
+        input[type="range"]::-webkit-slider-thumb:hover { transform:scale(1.25); }
+
+        .math-symbol { font-family:'Times New Roman',serif; font-style:italic; }
+        .quiz-option { transition: transform 0.15s, box-shadow 0.15s; }
+        .quiz-option:not(:disabled):hover { transform: translateX(8px); box-shadow:0 4px 14px rgba(0,0,0,0.12); }
+        .correct-answer { background:#10b981 !important; color:white !important; border-color:#10b981 !important; }
+        .wrong-answer { background:#ef4444 !important; color:white !important; border-color:#ef4444 !important; }
+        
+        .confetti { position:fixed; width:10px; height:10px; animation:confetti-fall 3s linear forwards; z-index:9999; }
+        @keyframes confetti-fall { to { transform:translateY(110vh) rotate(720deg); opacity:0; } }
+
+        .quiz-progress-bar { height:6px; border-radius:3px; background:var(--border); overflow:hidden; }
+        .quiz-progress-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#667eea,#764ba2); transition:width 0.4s ease; }
+        .timer-ring { transform:rotate(-90deg); }
+        .timer-circle { transition: stroke-dashoffset 1s linear; }
+
+        .history-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px; font-size:13px; font-weight:600; }
+        .badge-gold { background:#fef3c7; color:#92400e; }
+        .badge-silver { background:#f1f5f9; color:#475569; }
+        .badge-bronze { background:#fef9ee; color:#9a3412; }
+        .badge-normal { background:var(--panel-bg); color:var(--text-sub); }
+
+        .materi-card { transition: transform 0.3s, box-shadow 0.3s; }
+        .materi-card:hover { transform:translateY(-6px); box-shadow:0 24px 48px rgba(0,0,0,0.12); }
+
+        .toast { position:fixed; top:80px; left:50%; transform:translateX(-50%); padding:10px 22px; border-radius:999px; font-weight:600; font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,0.18); z-index:9998; animation: toastAnim 2.8s ease forwards; }
+        @keyframes toastAnim { 0%{opacity:0;transform:translateX(-50%) translateY(-10px)} 15%{opacity:1;transform:translateX(-50%) translateY(0)} 80%{opacity:1} 100%{opacity:0;transform:translateX(-50%) translateY(-6px)} }
+
+        @media(max-width:640px) { .nav-tabs { overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; } .nav-tabs::-webkit-scrollbar { display:none; } }
+        .dark-toggle { transition:transform 0.4s; }
+        [data-theme="dark"] .dark-toggle { transform:rotate(180deg); }
+        .step-card { background: var(--card-bg); border-radius:10px; padding:14px; }
+        .history-row:nth-child(even) { background: var(--panel-bg); }
+    </style>
+</head>
+<body>
+
+    <div id="gerbang-wrapper">
+        <div id="layar-1" class="gateway-screen active show" onclick="pindahLayar('layar-2', event)">
+            <img src="layar 1.jpeg" class="vn-bg" alt="Fungsi Kuadrat">
+        </div>
+
+        <div id="layar-2" class="gateway-screen" onclick="pindahLayar('layar-3', event)">
+            <button class="btn-back-vn" onclick="pindahLayar('layar-1', event)">Kembali</button>
+            <img src="layar 2.jpeg" class="vn-bg" alt="Cerita Parabola">
+        </div>
+
+        <div id="layar-3" class="gateway-screen">
+            <button class="btn-back-vn" onclick="pindahLayar('layar-2', event)">Kembali</button>
+            <img src="full karakter.jpeg" class="vn-bg" alt="Karakter Lengkap">
+            
+            <div class="area-klik si-b" onclick="pindahLayar('layar-b', event)"></div>
+            <div class="area-klik si-a" onclick="pindahLayar('layar-a', event)"></div>
+            <div class="area-klik si-c" onclick="pindahLayar('layar-c', event)"></div>
+
+            <button class="btn-login-gerbang" onclick="pindahLayar('layar-login', event)">
+                Mulai Belajar <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+
+        <div id="layar-a" class="gateway-screen" onclick="pindahLayar('layar-3', event)">
+            <button class="btn-back-vn" onclick="pindahLayar('layar-3', event)">Kembali</button>
+            <img src="si A.jpeg" class="vn-bg" alt="Profil Si A">
+        </div>
+        <div id="layar-b" class="gateway-screen" onclick="pindahLayar('layar-3', event)">
+            <button class="btn-back-vn" onclick="pindahLayar('layar-3', event)">Kembali</button>
+            <img src="si B.jpeg" class="vn-bg" alt="Profil Si B">
+        </div>
+        <div id="layar-c" class="gateway-screen" onclick="pindahLayar('layar-3', event)">
+            <button class="btn-back-vn" onclick="pindahLayar('layar-3', event)">Kembali</button>
+            <img src="si C.jpeg" class="vn-bg" alt="Profil Si C">
+        </div>
+
+        <div id="layar-login" class="gateway-screen cursor-default">
+            <div class="w-full h-full flex justify-center items-center">
+                <button class="btn-back-vn" onclick="pindahLayar('layar-3', event)">Kembali ke Cerita</button>
+                <div class="bg-[#1a2a2c] p-8 rounded-3xl w-[400px] text-center border-2 border-[#3b5c58] shadow-2xl relative">
+                    <h1 class="text-3xl font-bold text-[#f7d060] mb-2 font-['Fredoka']">Gerbang Aljebria</h1>
+                    <p class="text-[#8fa8a5] mb-6 text-sm">Persiapkan dirimu untuk petualangan fungsi kuadrat!</p>
+                    
+                    <div class="text-left mb-4">
+                        <label class="block font-bold text-[#a4d4ae] text-sm mb-2">Nama Penyihir (Siswa)</label>
+                        <input type="text" id="input-nama" placeholder="Ketik namamu..." autocomplete="off" class="w-full p-3 rounded-xl border-2 border-[#3b5c58] bg-[#111a1b] text-white focus:outline-none focus:border-[#5c8d89]">
+                    </div>
+
+                    <div class="text-left mb-6">
+                        <label class="block font-bold text-[#a4d4ae] text-sm mb-2">Pilih Avatar / Foto</label>
+                        <input type="file" id="input-avatar" accept="image/*" onchange="previewFile()" class="w-full text-sm text-[#8fa8a5] mb-2 text-white">
+                        <div class="flex items-center gap-3 bg-[#111a1b] p-3 rounded-xl border border-dashed border-[#3b5c58]">
+                            <img id="preview-avatar-img" src="si A.jpeg" class="w-12 h-12 rounded-full object-cover border-2 border-[#5c8d89]">
+                            <span class="text-xs text-[#8fa8a5]">Pratinjau Foto</span>
+                        </div>
+                    </div>
+                    
+                    <button onclick="mulaiMathViz()" class="w-full bg-[#5c8d89] hover:bg-[#70a6a1] text-white font-bold py-3 rounded-xl transition-all shadow-lg font-['Fredoka'] text-lg">
+                        Masuk & Belajar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <canvas id="bg-canvas"></canvas>
+
+    <nav class="nav-glass fixed w-full z-50 top-0 shadow-lg">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6">
+            <div class="flex flex-wrap md:flex-nowrap justify-between min-h-[3.5rem] py-2 items-center gap-2">
+
+                <div class="flex items-center gap-3 order-1 flex-shrink-0 bg-indigo-900/30 pr-4 rounded-full border border-indigo-500/30">
+                    <img id="mathviz-nav-avatar" src="si A.jpeg" class="w-9 h-9 rounded-full object-cover border-2 border-indigo-400" alt="Avatar">
+                    <div class="hidden sm:block">
+                        <span id="mathviz-nav-nama" class="font-bold text-sm block leading-none text-indigo-100">Siswa</span>
+                        <span class="text-[10px] text-indigo-300">Penyihir Aljebria</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 order-2 md:order-3 flex-shrink-0">
+                    <div class="flex items-center gap-1.5 bg-indigo-100 dark:bg-indigo-900/40 px-3 py-1 rounded-full" title="Total XP">
+                        <i class="fas fa-star text-yellow-500 text-xs"></i>
+                        <span id="score-display" class="font-bold text-indigo-700 text-sm" aria-live="polite">0 XP</span>
+                    </div>
+                    <button onclick="toggleDark()" aria-label="Toggle dark mode"
+                        class="w-8 h-8 rounded-full flex items-center justify-center text-sm hover:bg-gray-200 dark-toggle transition-colors"
+                        style="color:var(--text-sub)">
+                        <i id="dark-icon" class="fas fa-moon"></i>
+                    </button>
+                    <button onclick="clearProgress()" title="Hapus XP" aria-label="Hapus progress"
+                        class="w-8 h-8 rounded-full flex items-center justify-center text-sm hover:bg-red-100 transition-colors text-gray-400 hover:text-red-500">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+
+                <div class="nav-tabs flex w-full md:w-auto gap-1 md:gap-2 order-3 md:order-2 pb-1 md:pb-0">
+                    <button onclick="switchTab('materi',this)" role="tab" aria-selected="true"
+                        class="nav-tab tab-active px-3 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0">
+                        <i class="fas fa-book mr-1"></i>Materi
+                    </button>
+                    <button onclick="switchTab('simulasi',this)" role="tab" aria-selected="false"
+                        class="nav-tab px-3 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0"
+                        style="color:var(--text-main)">
+                        <i class="fas fa-chart-line mr-1"></i>Simulasi
+                    </button>
+                    <button onclick="switchTab('kalkulator',this)" role="tab" aria-selected="false"
+                        class="nav-tab px-3 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0"
+                        style="color:var(--text-main)">
+                        <i class="fas fa-calculator mr-1"></i>Kalkulator
+                    </button>
+                    <button onclick="switchTab('quiz',this)" role="tab" aria-selected="false"
+                        class="nav-tab px-3 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0"
+                        style="color:var(--text-main)">
+                        <i class="fas fa-gamepad mr-1"></i>Quiz
+                    </button>
+                    <button onclick="switchTab('riwayat',this)" role="tab" aria-selected="false"
+                        class="nav-tab px-3 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0"
+                        style="color:var(--text-main)">
+                        <i class="fas fa-history mr-1"></i>Riwayat
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="pt-24 pb-12 px-3 sm:px-4 max-w-7xl mx-auto">
+
+        <div class="text-center mb-10 floating">
+            <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-3 drop-shadow-lg leading-tight">
+                Fungsi Kuadrat <span class="text-yellow-300">Interaktif</span>
+            </h1>
+            <p class="text-base sm:text-lg text-white/90 max-w-2xl mx-auto px-2">
+                Pelajari fungsi kuadrat lewat simulasi real-time, kalkulator pintar, dan quiz seru!
+            </p>
+        </div>
+
+        <div id="materi" class="tab-content slide-in" role="tabpanel">
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <div class="materi-card glass rounded-2xl p-6 shadow-xl">
+                    <div class="flex items-center mb-4 gap-3">
+                        <div class="w-11 h-11 bg-blue-500 rounded-full flex items-center justify-center text-white text-xl flex-shrink-0">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                        <h2 class="text-xl font-bold gradient-text">Apa itu Fungsi Kuadrat?</h2>
+                    </div>
+                    <p class="text-sub text-sm mb-3 leading-relaxed">
+                        Fungsi kuadrat adalah fungsi polinomial berderajat dua. Ada tiga bentuk representasinya:
+                    </p>
+                    <div class="space-y-2">
+                        <div class="bg-blue-50 rounded-xl p-3 border-l-4 border-blue-500">
+                            <p class="text-xs font-bold text-blue-700 mb-1">Bentuk Umum (Standard Form)</p>
+                            <p class="math-symbol text-lg font-bold text-center text-blue-800">f(x) = ax² + bx + c</p>
+                        </div>
+                        <div class="bg-purple-50 rounded-xl p-3 border-l-4 border-purple-500">
+                            <p class="text-xs font-bold text-purple-700 mb-1">Bentuk Vertex (Vertex Form)</p>
+                            <p class="math-symbol text-lg font-bold text-center text-purple-800">f(x) = a(x − h)² + k</p>
+                            <p class="text-xs text-purple-600 text-center mt-1">h = absis vertex, k = ordinat vertex</p>
+                        </div>
+                        <div class="bg-green-50 rounded-xl p-3 border-l-4 border-green-500">
+                            <p class="text-xs font-bold text-green-700 mb-1">Bentuk Faktor (Factored Form)</p>
+                            <p class="math-symbol text-lg font-bold text-center text-green-800">f(x) = a(x − p)(x − q)</p>
+                            <p class="text-xs text-green-600 text-center mt-1">p, q = akar-akar persamaan</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="materi-card glass rounded-2xl p-6 shadow-xl">
+                    <div class="flex items-center mb-4 gap-3">
+                        <div class="w-11 h-11 bg-purple-500 rounded-full flex items-center justify-center text-white text-xl flex-shrink-0">
+                            <i class="fas fa-chart-area"></i>
+                        </div>
+                        <h2 class="text-xl font-bold gradient-text">Karakteristik Grafik</h2>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex items-start gap-3 p-3 rounded-lg card-bg shadow-sm">
+                            <div class="w-7 h-7 bg-red-100 rounded-full flex items-center justify-center text-red-700 font-bold text-sm flex-shrink-0">1</div>
+                            <div>
+                                <h4 class="font-bold text-sm text-main">Arah Bukaan</h4>
+                                <p class="text-xs text-sub">a &gt; 0 → terbuka ke atas (nilai minimum). a &lt; 0 → terbuka ke bawah (nilai maksimum).</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 p-3 rounded-lg card-bg shadow-sm">
+                            <div class="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">2</div>
+                            <div>
+                                <h4 class="font-bold text-sm text-main">Titik Puncak & Sumbu Simetri</h4>
+                                <p class="text-xs text-sub">Vertex: (-b/2a, f(-b/2a)) &nbsp;|&nbsp; Sumbu simetri: x = -b/2a</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 p-3 rounded-lg card-bg shadow-sm">
+                            <div class="w-7 h-7 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-bold text-sm flex-shrink-0">3</div>
+                            <div>
+                                <h4 class="font-bold text-sm text-main">Diskriminan & Akar</h4>
+                                <p class="text-xs text-sub">D &gt; 0: dua akar berbeda &nbsp;|&nbsp; D = 0: satu akar kembar &nbsp;|&nbsp; D &lt; 0: tidak ada akar real</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 p-3 rounded-lg card-bg shadow-sm">
+                            <div class="w-7 h-7 bg-orange-100 rounded-full flex items-center justify-center text-orange-700 font-bold text-sm flex-shrink-0">4</div>
+                            <div>
+                                <h4 class="font-bold text-sm text-main">Konversi Bentuk</h4>
+                                <p class="text-xs text-sub">Lengkapi kuadrat untuk mendapat bentuk vertex. Faktorkan untuk bentuk faktor.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass rounded-2xl p-6 shadow-xl mb-6">
+                <h3 class="text-xl font-bold mb-5 text-center gradient-text">Rumus-Rumus Penting</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl text-center hover:scale-105 transition-transform">
+                        <i class="fas fa-crosshairs text-3xl text-blue-600 mb-2"></i>
+                        <h4 class="font-bold text-sm mb-1 text-black">Titik Puncak</h4>
+                        <p class="math-symbol text-blue-800 text-sm">x = -b/2a</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl text-center hover:scale-105 transition-transform">
+                        <i class="fas fa-superscript text-3xl text-purple-600 mb-2"></i>
+                        <h4 class="font-bold text-sm mb-1 text-black">Diskriminan</h4>
+                        <p class="math-symbol text-purple-800 text-sm">D = b² − 4ac</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl text-center hover:scale-105 transition-transform">
+                        <i class="fas fa-project-diagram text-3xl text-green-600 mb-2"></i>
+                        <h4 class="font-bold text-sm mb-1 text-black">Rumus ABC</h4>
+                        <p class="math-symbol text-green-800 text-sm">x = (−b ± √D)/2a</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl text-center hover:scale-105 transition-transform">
+                        <i class="fas fa-compress-arrows-alt text-3xl text-orange-600 mb-2"></i>
+                        <h4 class="font-bold text-sm mb-1 text-black">Nilai Optimum</h4>
+                        <p class="math-symbol text-orange-800 text-sm">y = (4ac − b²)/4a</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass rounded-2xl p-6 shadow-xl">
+                <h3 class="text-xl font-bold mb-5 text-center gradient-text">
+                    <i class="fas fa-globe-asia mr-2"></i>Aplikasi di Kehidupan Nyata
+                </h3>
+                <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="rounded-xl p-4 border-2 border-blue-200 hover:border-blue-400 transition-colors cursor-pointer hover:shadow-md card-bg">
+                        <div class="text-3xl mb-2">⚽</div>
+                        <h4 class="font-bold text-sm text-main mb-1">Lintasan Bola</h4>
+                        <p class="text-xs text-sub">Ketika bola ditendang, lintasannya membentuk parabola: <span class="math-symbol font-semibold">h(t) = −5t² + 20t + 1</span></p>
+                        <p class="text-xs text-indigo-600 font-semibold mt-2">h = tinggi, t = waktu (detik)</p>
+                    </div>
+                    <div class="rounded-xl p-4 border-2 border-green-200 hover:border-green-400 transition-colors cursor-pointer hover:shadow-md card-bg">
+                        <div class="text-3xl mb-2">💰</div>
+                        <h4 class="font-bold text-sm text-main mb-1">Keuntungan Bisnis</h4>
+                        <p class="text-xs text-sub">Profit toko bergantung harga jual: <span class="math-symbol font-semibold">P(x) = −2x² + 80x − 300</span></p>
+                        <p class="text-xs text-green-600 font-semibold mt-2">Cari x agar profit maksimum!</p>
+                    </div>
+                    <div class="rounded-xl p-4 border-2 border-purple-200 hover:border-purple-400 transition-colors cursor-pointer hover:shadow-md card-bg">
+                        <div class="text-3xl mb-2">🏗️</div>
+                        <h4 class="font-bold text-sm text-main mb-1">Jembatan Lengkung</h4>
+                        <p class="text-xs text-sub">Desain busur jembatan menggunakan fungsi kuadrat: <span class="math-symbol font-semibold">y = −0.1x² + 4x</span></p>
+                        <p class="text-xs text-purple-600 font-semibold mt-2">Tentukan titik tertinggi busur!</p>
+                    </div>
+                    <div class="rounded-xl p-4 border-2 border-red-200 hover:border-red-400 transition-colors cursor-pointer hover:shadow-md card-bg">
+                        <div class="text-3xl mb-2">📡</div>
+                        <h4 class="font-bold text-sm text-main mb-1">Antena Parabola</h4>
+                        <p class="text-xs text-sub">Permukaan antena berbentuk parabola untuk memfokuskan sinyal ke satu titik (fokus).</p>
+                        <p class="text-xs text-red-600 font-semibold mt-2">Fisika & telekomunikasi</p>
+                    </div>
+                    <div class="rounded-xl p-4 border-2 border-yellow-200 hover:border-yellow-400 transition-colors cursor-pointer hover:shadow-md card-bg">
+                        <div class="text-3xl mb-2">🌾</div>
+                        <h4 class="font-bold text-sm text-main mb-1">Optimasi Lahan</h4>
+                        <p class="text-xs text-sub">Luas pagar dengan keliling tetap: <span class="math-symbol font-semibold">L(x) = x(100 − x) = −x² + 100x</span></p>
+                        <p class="text-xs text-yellow-700 font-semibold mt-2">Maksimalkan luas dengan x = 50!</p>
+                    </div>
+                    <div class="rounded-xl p-4 border-2 border-teal-200 hover:border-teal-400 transition-colors cursor-pointer hover:shadow-md card-bg">
+                        <div class="text-3xl mb-2">🔭</div>
+                        <h4 class="font-bold text-sm text-main mb-1">Orbit Benda Langit</h4>
+                        <p class="text-xs text-sub">Lintasan komet dan benda langit tertentu mendekati bentuk parabola saat melewati matahari.</p>
+                        <p class="text-xs text-teal-600 font-semibold mt-2">Astronomi & fisika</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="simulasi" class="tab-content hidden" role="tabpanel">
+            <div class="glass rounded-2xl p-4 sm:p-6 shadow-xl">
+                <div class="flex flex-col lg:flex-row gap-5">
+                    <div class="lg:w-80 flex-shrink-0 space-y-4">
+                        <div class="card-bg2 p-5 rounded-xl">
+                            <h3 class="text-base font-bold mb-4 flex items-center gap-2 text-main">
+                                <i class="fas fa-sliders-h text-indigo-500"></i> Kontrol Parameter
+                            </h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="flex justify-between text-sm font-semibold mb-1 text-main" for="input-a">
+                                        <span>a (koefisien x²)</span>
+                                        <span id="val-a" class="text-indigo-500 font-bold" aria-live="polite">1</span>
+                                    </label>
+                                    <input type="range" id="input-a" min="-5" max="5" step="0.1" value="1" oninput="updateGraph()">
+                                    <div class="flex justify-between text-xs text-muted mt-0.5"><span>-5</span><span>0</span><span>5</span></div>
+                                </div>
+                                <div>
+                                    <label class="flex justify-between text-sm font-semibold mb-1 text-main" for="input-b">
+                                        <span>b (koefisien x)</span>
+                                        <span id="val-b" class="text-indigo-500 font-bold" aria-live="polite">0</span>
+                                    </label>
+                                    <input type="range" id="input-b" min="-10" max="10" step="0.5" value="0" oninput="updateGraph()">
+                                    <div class="flex justify-between text-xs text-muted mt-0.5"><span>-10</span><span>0</span><span>10</span></div>
+                                </div>
+                                <div>
+                                    <label class="flex justify-between text-sm font-semibold mb-1 text-main" for="input-c">
+                                        <span>c (konstanta)</span>
+                                        <span id="val-c" class="text-indigo-500 font-bold" aria-live="polite">0</span>
+                                    </label>
+                                    <input type="range" id="input-c" min="-10" max="10" step="0.5" value="0" oninput="updateGraph()">
+                                    <div class="flex justify-between text-xs text-muted mt-0.5"><span>-10</span><span>0</span><span>10</span></div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 p-3 rounded-xl border-2 border-indigo-200 bg-indigo-50/60">
+                                <p class="text-center font-bold math-symbol text-indigo-700 text-base mb-2" id="equation-display">f(x) = x²</p>
+                                <div class="text-xs space-y-1 text-sub">
+                                    <p>🔴 Vertex: <span id="vertex-display" class="font-mono font-bold text-red-600">(0, 0)</span></p>
+                                    <p>🟣 Sumbu simetri: <span id="axis-display" class="font-mono font-bold text-purple-600">x = 0</span></p>
+                                    <p>📐 Diskriminan: <span id="discriminant-display" class="font-mono font-bold">0</span></p>
+                                    <p id="roots-display" class="font-mono">Akar: x = 0</p>
+                                    <p id="direction-display" class="font-semibold text-indigo-600">↑ Terbuka ke atas (minimum)</p>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 grid grid-cols-2 gap-2">
+                                <button onclick="animateGraph()" class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-2 rounded-lg text-sm font-semibold hover:shadow-lg transition-all">
+                                    <i class="fas fa-play mr-1"></i>Animasi
+                                </button>
+                                <button onclick="resetGraph()" class="text-sm font-semibold py-2 rounded-lg transition-all" style="background:var(--border);color:var(--text-main)">
+                                    <i class="fas fa-redo mr-1"></i>Reset
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="info-panel p-4 rounded-xl border-l-4">
+                            <h4 class="font-bold text-sm mb-2"><i class="fas fa-info-circle mr-1"></i>Petunjuk</h4>
+                            <ul class="text-xs space-y-1">
+                                <li>• Geser slider untuk perubahan real-time</li>
+                                <li>• <span class="text-red-500 font-semibold">●</span> Titik merah = vertex (puncak)</li>
+                                <li>• <span class="text-purple-500 font-semibold">-- --</span> Garis ungu putus-putus = sumbu simetri</li>
+                                <li>• a memengaruhi arah & lebar parabola</li>
+                                <li>• b menggeser posisi vertex horizontal</li>
+                                <li>• c menggeser parabola naik/turun</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 min-h-0">
+                        <div class="rounded-xl shadow-inner p-3 relative" style="background:var(--card-bg); min-height:420px;">
+                            <canvas id="quadraticChart" aria-label="Grafik fungsi kuadrat interaktif" role="img"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="kalkulator" class="tab-content hidden" role="tabpanel">
+            <div class="max-w-2xl mx-auto">
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-2xl font-bold text-center mb-6 gradient-text">Kalkulator Fungsi Kuadrat</h2>
+
+                    <div class="grid grid-cols-3 gap-3 mb-5">
+                        <div class="text-center">
+                            <label class="block font-bold text-sub text-sm mb-1" for="calc-a">Nilai a</label>
+                            <input type="number" id="calc-a" value="1" class="w-full p-3 text-center text-2xl font-bold rounded-lg border-2 focus:outline-none focus:border-indigo-500 transition input-theme" oninput="calculate()">
+                        </div>
+                        <div class="text-center">
+                            <label class="block font-bold text-sub text-sm mb-1" for="calc-b">Nilai b</label>
+                            <input type="number" id="calc-b" value="-4" class="w-full p-3 text-center text-2xl font-bold rounded-lg border-2 focus:outline-none focus:border-indigo-500 transition input-theme" oninput="calculate()">
+                        </div>
+                        <div class="text-center">
+                            <label class="block font-bold text-sub text-sm mb-1" for="calc-c">Nilai c</label>
+                            <input type="number" id="calc-c" value="3" class="w-full p-3 text-center text-2xl font-bold rounded-lg border-2 focus:outline-none focus:border-indigo-500 transition input-theme" oninput="calculate()">
+                        </div>
+                    </div>
+
+                    <div class="bg-indigo-50/70 p-4 rounded-xl mb-5 border border-indigo-200">
+                        <p class="text-center font-bold math-symbol text-indigo-700 text-2xl" id="calc-equation">f(x) = x² − 4x + 3</p>
+                        <p class="text-center text-xs text-indigo-500 mt-1" id="calc-vertex-form"></p>
+                        <p class="text-center text-xs text-indigo-500" id="calc-factor-form"></p>
+                    </div>
+
+                    <div class="space-y-3" id="calc-results">
+                        <div class="flex justify-between items-center p-3 rounded-lg card-bg shadow-sm">
+                            <span class="font-semibold text-sub text-sm">Titik Puncak (Vertex)</span>
+                            <span class="font-bold text-indigo-600" id="calc-vertex">(2, -1)</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 rounded-lg card-bg shadow-sm">
+                            <span class="font-semibold text-sub text-sm">Sumbu Simetri</span>
+                            <span class="font-bold text-blue-600" id="calc-axis">x = 2</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 rounded-lg card-bg shadow-sm">
+                            <span class="font-semibold text-sub text-sm">Diskriminan (D)</span>
+                            <span class="font-bold text-purple-600" id="calc-disc">4</span>
+                        </div>
+                        <div class="p-3 rounded-lg card-bg shadow-sm">
+                            <span class="font-semibold text-sub text-sm">Akar-akar (x₁, x₂)</span>
+                            <div class="text-right font-bold text-green-600 mt-1" id="calc-roots">x₁ = 3, x₂ = 1</div>
+                        </div>
+                        <div class="flex justify-between items-center p-3 rounded-lg card-bg shadow-sm">
+                            <span class="font-semibold text-sub text-sm">Titik Potong Sumbu-Y</span>
+                            <span class="font-bold text-orange-600" id="calc-yint">(0, 3)</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 grid grid-cols-2 gap-3">
+                        <button onclick="showSteps()" class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 rounded-lg font-bold text-sm hover:shadow-xl transition-all hover:scale-[1.02]">
+                            <i class="fas fa-list-ol mr-1"></i>Langkah Pengerjaan
+                        </button>
+                        <button onclick="sendToSimulasi()" class="bg-gradient-to-r from-green-500 to-teal-600 text-white py-3 rounded-lg font-bold text-sm hover:shadow-xl transition-all hover:scale-[1.02]">
+                            <i class="fas fa-chart-line mr-1"></i>Lihat di Grafik
+                        </button>
+                    </div>
+
+                    <div id="steps-container" class="hidden mt-5 p-5 rounded-xl border-2 border-theme" style="background:var(--panel-bg)">
+                        <h3 class="font-bold text-base mb-4 text-main">📝 Langkah-langkah Penyelesaian:</h3>
+                        <div id="steps-content" class="space-y-3 text-sub text-sm"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="quiz" class="tab-content hidden" role="tabpanel">
+            <div class="max-w-2xl mx-auto">
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <div class="text-center mb-6">
+                        <h2 class="text-2xl font-bold gradient-text mb-1">Quiz Fungsi Kuadrat</h2>
+                        <p class="text-sub text-sm">5 soal acak dari bank soal — kumpulkan XP sebanyak mungkin!</p>
+                        <div class="mt-4 flex flex-wrap justify-center gap-3">
+                            <div class="px-4 py-1.5 rounded-full shadow-sm text-sm card-bg">
+                                Soal <span id="current-question" class="font-bold text-indigo-600" aria-live="polite">1</span> / <span id="total-questions" class="text-sub">5</span>
+                            </div>
+                            <div class="px-4 py-1.5 rounded-full shadow-sm text-sm card-bg">
+                                Skor: <span id="quiz-score" class="font-bold text-green-600" aria-live="polite">0</span>
+                            </div>
+                            <div class="px-3 py-1.5 rounded-full shadow-sm text-sm card-bg flex items-center gap-2">
+                                <svg width="24" height="24" class="timer-ring">
+                                    <circle cx="12" cy="12" r="9" stroke="#e5e7eb" stroke-width="3" fill="none"/>
+                                    <circle id="timer-circle" cx="12" cy="12" r="9" stroke="#667eea" stroke-width="3" fill="none" stroke-dasharray="56.5" stroke-dashoffset="0" class="timer-circle"/>
+                                </svg>
+                                <span id="timer-display" class="font-bold text-indigo-600 w-5 text-center" aria-live="polite">20</span>s
+                            </div>
+                        </div>
+                        <div class="mt-3 quiz-progress-bar">
+                            <div id="quiz-progress-fill" class="quiz-progress-fill" style="width:0%"></div>
+                        </div>
+                    </div>
+
+                    <div id="quiz-container" class="space-y-4" aria-live="polite"></div>
+
+                    <div id="quiz-result" class="hidden text-center py-8">
+                        <i class="fas fa-trophy text-6xl text-yellow-400 mb-4"></i>
+                        <h3 class="text-2xl font-bold text-main mb-1">Selesai!</h3>
+                        <p class="text-sub text-sm mb-4">Kamu telah menyelesaikan quiz</p>
+                        <div class="p-5 rounded-xl mb-5" style="background:var(--panel-bg)">
+                            <p class="text-sm text-sub mb-1">Skor Akhir:</p>
+                            <p class="text-5xl font-extrabold gradient-text" id="final-score">0/100</p>
+                            <p id="result-message" class="mt-2 text-sub font-semibold text-sm"></p>
+                        </div>
+                        <button onclick="restartQuiz()" class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-8 py-3 rounded-full font-bold hover:shadow-xl transition-all">
+                            <i class="fas fa-redo mr-2"></i>Coba Lagi
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="riwayat" class="tab-content hidden" role="tabpanel">
+            <div class="max-w-2xl mx-auto">
+                <div class="glass rounded-2xl p-6 shadow-xl">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold gradient-text">
+                            <i class="fas fa-history mr-2"></i>Riwayat Quiz
+                        </h2>
+                        <button onclick="clearHistory()" class="text-xs text-red-400 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors border border-red-200">
+                            <i class="fas fa-trash mr-1"></i>Hapus Riwayat
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3 mb-6">
+                        <div class="p-3 rounded-xl text-center" style="background:var(--panel-bg)">
+                            <p class="text-2xl font-extrabold gradient-text" id="stat-total-games">0</p>
+                            <p class="text-xs text-sub">Total Sesi</p>
+                        </div>
+                        <div class="p-3 rounded-xl text-center" style="background:var(--panel-bg)">
+                            <p class="text-2xl font-extrabold text-green-500" id="stat-best-score">-</p>
+                            <p class="text-xs text-sub">Skor Terbaik</p>
+                        </div>
+                        <div class="p-3 rounded-xl text-center" style="background:var(--panel-bg)">
+                            <p class="text-2xl font-extrabold text-indigo-500" id="stat-avg-score">-</p>
+                            <p class="text-xs text-sub">Rata-rata</p>
+                        </div>
+                    </div>
+
+                    <div id="history-table-wrap">
+                        <div id="history-empty" class="text-center py-12 text-sub">
+                            <i class="fas fa-inbox text-4xl mb-3 text-gray-300"></i>
+                            <p class="text-sm">Belum ada riwayat quiz.</p>
+                            <p class="text-xs mt-1">Selesaikan quiz pertamamu!</p>
+                        </div>
+                        <div id="history-table" class="hidden">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="text-left text-xs text-muted border-b border-theme">
+                                        <th class="pb-2">#</th>
+                                        <th class="pb-2">Tanggal</th>
+                                        <th class="pb-2">Skor</th>
+                                        <th class="pb-2">XP</th>
+                                        <th class="pb-2">Peringkat</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><button onclick="toggleHelp()" aria-label="Bantuan" class="fixed bottom-5 right-5 w-12 h-12 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full shadow-2xl flex items-center justify-center text-xl hover:scale-110 transition-transform z-50 pulse-glow">
+        <i class="fas fa-question"></i>
+    </button>
+
+    <div id="help-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <div class="rounded-2xl max-w-sm w-full p-6 shadow-2xl" style="background:var(--card-bg)">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold gradient-text">Bantuan Cepat</h3>
+                <button onclick="toggleHelp()" aria-label="Tutup" class="text-muted hover:text-main transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="space-y-2 text-sm text-sub">
+                <p><i class="fas fa-book text-indigo-500 mr-2"></i><strong class="text-main">Materi</strong> — 3 bentuk fungsi kuadrat + aplikasi nyata</p>
+                <p><i class="fas fa-chart-line text-purple-500 mr-2"></i><strong class="text-main">Simulasi</strong> — Grafik + vertex merah + sumbu simetri ungu</p>
+                <p><i class="fas fa-calculator text-blue-500 mr-2"></i><strong class="text-main">Kalkulator</strong> — Hitung & kirim langsung ke grafik</p>
+                <p><i class="fas fa-gamepad text-green-500 mr-2"></i><strong class="text-main">Quiz</strong> — 5 soal acak, timer 20 detik per soal</p>
+                <p><i class="fas fa-history text-orange-500 mr-2"></i><strong class="text-main">Riwayat</strong> — Rekap semua sesi quiz kamu</p>
+                <p><i class="fas fa-moon text-gray-500 mr-2"></i><strong class="text-main">Dark Mode</strong> — Tombol 🌙 di pojok kanan atas</p>
+            </div>
+            <button onclick="toggleHelp()" class="w-full mt-5 py-2 rounded-lg font-semibold text-sm transition-colors" style="background:var(--panel-bg);color:var(--text-main)">
+                Tutup
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+    // ===================== A. LOGIKA VN & LOGIN (GERBANG DEPAN) =====================
+    let base64AvatarUrl = "si A.jpeg";
+
+    function pindahLayar(targetId, eventObj) {
+        if (eventObj) eventObj.stopPropagation(); 
+        else if (window.event) window.event.stopPropagation();
+
+        const semuaLayar = document.querySelectorAll('.gateway-screen');
+        const layarAktif = document.querySelector('.gateway-screen.active');
+        const layarTarget = document.getElementById(targetId);
+
+        if (layarAktif && layarAktif.id !== targetId) {
+            layarAktif.classList.remove('show');
+            setTimeout(() => {
+                layarAktif.classList.remove('active');
+                if(layarTarget) {
+                    layarTarget.classList.add('active');
+                    setTimeout(() => layarTarget.classList.add('show'), 50);
+                }
+            }, 400);
+        } else if (layarTarget) {
+            layarTarget.classList.add('active');
+            setTimeout(() => layarTarget.classList.add('show'), 50);
+        }
+    }
+
+    function previewFile() {
+        const preview = document.getElementById('preview-avatar-img');
+        const file = document.getElementById('input-avatar').files[0];
+        const reader = new FileReader();
+
+        reader.addEventListener("load", function () {
+            base64AvatarUrl = reader.result;
+            preview.src = base64AvatarUrl;
+        }, false);
+
+        if (file) reader.readAsDataURL(file);
+    }
+
+    function mulaiMathViz() {
+        const nama = document.getElementById('input-nama').value;
+        if (nama.trim() === "") { 
+            alert("Eits! Ketik nama penyihirmu dulu ya!"); 
+            return; 
+        }
+
+        // 1. Terapkan Nama & Foto ke Navigasi MathViz
+        document.getElementById('mathviz-nav-nama').innerText = nama;
+        document.getElementById('mathviz-nav-avatar').src = base64AvatarUrl;
+
+        // 2. Hilangkan Gerbang VN Sepenuhnya
+        const gerbang = document.getElementById('gerbang-wrapper');
+        const layarLogin = document.getElementById('layar-login');
+        
+        layarLogin.style.opacity = '0';
+        setTimeout(() => {
+            gerbang.style.display = 'none'; // Sembunyikan pembungkus depan
+            
+            // 3. Render ulang grafik MathViz agar ukurannya pas dengan layar
+            if(chart) chart.resize();
+        }, 500);
+    }
+
+    // ===================== B. LOGIKA MATHVIZ ASLI =====================
+    let chart;
+    let currentQuizIndex = 0;
+    let quizScore = 0;
+    let shuffledQuiz = [];
+    let quizTimer = null;
+    let quizTimeLeft = 20;
+    let totalXP = parseInt(localStorage.getItem('mathviz_xp') || '0');
+    let isDark = localStorage.getItem('mathviz_dark') === 'true';
+
+    if (isDark) applyDark();
+    document.getElementById('score-display').textContent = totalXP + ' XP';
+
+    function toggleDark() {
+        isDark = !isDark;
+        localStorage.setItem('mathviz_dark', isDark);
+        if (isDark) applyDark(); else applyLight();
+        if (chart) {
+            setTimeout(() => {
+                const isDarkNow = document.documentElement.getAttribute('data-theme') === 'dark';
+                chart.options.scales.x.grid.color = isDarkNow ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+                chart.options.scales.y.grid.color = isDarkNow ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+                chart.options.scales.x.ticks.color = isDarkNow ? '#9ca3af' : '#6b7280';
+                chart.options.scales.y.ticks.color = isDarkNow ? '#9ca3af' : '#6b7280';
+                chart.update();
+            }, 100);
+        }
+    }
+    function applyDark() {
+        document.documentElement.setAttribute('data-theme','dark');
+        document.getElementById('dark-icon').className = 'fas fa-sun';
+    }
+    function applyLight() {
+        document.documentElement.setAttribute('data-theme','light');
+        document.getElementById('dark-icon').className = 'fas fa-moon';
+    }
+
+    function switchTab(name, btn) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+        const el = document.getElementById(name);
+        el.classList.remove('hidden');
+        el.classList.add('slide-in');
+        document.querySelectorAll('.nav-tab').forEach(b => {
+            b.classList.remove('tab-active');
+            b.style.color = 'var(--text-main)';
+            b.setAttribute('aria-selected','false');
+        });
+        btn.classList.add('tab-active');
+        btn.style.color = '';
+        btn.setAttribute('aria-selected','true');
+        if (name === 'simulasi' && chart) setTimeout(() => chart.resize(), 80);
+        if (name === 'riwayat') renderHistory();
+    }
+
+    function initChart() {
+        const ctx = document.getElementById('quadraticChart').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    { label: 'f(x)', data: generateData(1, 0, 0), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.08)', borderWidth: 3, pointRadius: 0, pointHoverRadius: 5, showLine: true, fill: true },
+                    { label: '● Vertex', data: [{ x: 0, y: 0 }], borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.9)', pointRadius: 10, pointHoverRadius: 13, showLine: false },
+                    { label: '--- Sumbu Simetri', data: symmetryAxisData(0), borderColor: '#8b5cf6', borderWidth: 2, borderDash: [6, 4], pointRadius: 0, showLine: true, fill: false, tension: 0 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: 'nearest' },
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { usePointStyle: true, font: { family: 'Poppins', size: 11 }, color: isDark ? '#d1d5db' : '#374151' } },
+                    tooltip: { callbacks: { label(ctx) { if (ctx.datasetIndex === 1) return `Vertex: (${ctx.parsed.x.toFixed(2)}, ${ctx.parsed.y.toFixed(2)})`; if (ctx.datasetIndex === 2) return `Sumbu simetri: x = ${ctx.parsed.x.toFixed(2)}`; return `f(${ctx.parsed.x.toFixed(1)}) = ${ctx.parsed.y.toFixed(2)}`; } } }
+                },
+                scales: {
+                    x: { type: 'linear', position: 'center', min: -10, max: 10, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' }, ticks: { color: isDark ? '#9ca3af' : '#6b7280', font: { size: 10 } }, title: { display: true, text: 'x', font: { style: 'italic' }, color: isDark ? '#9ca3af' : '#6b7280' } },
+                    y: { type: 'linear', position: 'center', min: -10, max: 10, grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' }, ticks: { color: isDark ? '#9ca3af' : '#6b7280', font: { size: 10 } }, title: { display: true, text: 'f(x)', font: { style: 'italic' }, color: isDark ? '#9ca3af' : '#6b7280' } }
+                }
+            }
+        });
+    }
+
+    function generateData(a, b, c) {
+        const pts = [];
+        for (let x = -10; x <= 10.01; x += 0.1) {
+            const y = a*x*x + b*x + c;
+            if (y >= -10.5 && y <= 10.5) pts.push({ x: parseFloat(x.toFixed(2)), y: parseFloat(y.toFixed(4)) });
+        }
+        return pts;
+    }
+
+    function symmetryAxisData(vx) {
+        if (isNaN(vx) || !isFinite(vx)) return [];
+        return [{ x: vx, y: -10 }, { x: vx, y: 10 }];
+    }
+
+    function fmtEq(a, b, c) {
+        let eq = 'f(x) = ';
+        if (a === 0 && b === 0) return eq + c;
+        if (a !== 0) eq += (a === 1 ? '' : a === -1 ? '-' : a) + 'x²';
+        if (b !== 0) { const absB = Math.abs(b), sign = b > 0 ? (a !== 0 ? ' + ' : '') : ' − '; eq += sign + (absB === 1 ? '' : absB) + 'x'; }
+        if (c !== 0) { const absC = Math.abs(c), sign = c > 0 ? ((a !== 0 || b !== 0) ? ' + ' : '') : ' − '; eq += sign + absC; }
+        return eq;
+    }
+
+    function updateGraph() {
+        const a = parseFloat(document.getElementById('input-a').value);
+        const b = parseFloat(document.getElementById('input-b').value);
+        const c = parseFloat(document.getElementById('input-c').value);
+        document.getElementById('val-a').textContent = a; document.getElementById('val-b').textContent = b; document.getElementById('val-c').textContent = c;
+        document.getElementById('equation-display').textContent = fmtEq(a, b, c);
+
+        const vx = a !== 0 ? -b / (2 * a) : -b;
+        const vy = a * vx * vx + b * vx + c;
+        const D = b * b - 4 * a * c;
+
+        document.getElementById('vertex-display').textContent = `(${vx.toFixed(2)}, ${vy.toFixed(2)})`;
+        document.getElementById('axis-display').textContent = `x = ${vx.toFixed(2)}`;
+        document.getElementById('discriminant-display').textContent = D.toFixed(2);
+
+        let rootsText = '';
+        if (a === 0) rootsText = b !== 0 ? `x = ${(-c/b).toFixed(2)} (linear)` : 'tidak ada';
+        else if (D > 0) { const r1 = (-b + Math.sqrt(D))/(2*a), r2 = (-b - Math.sqrt(D))/(2*a); rootsText = `x₁=${r1.toFixed(2)}, x₂=${r2.toFixed(2)}`; }
+        else if (D === 0) { rootsText = `x=${vx.toFixed(2)} (kembar)`; }
+        else rootsText = 'tidak ada akar real';
+
+        document.getElementById('roots-display').textContent = 'Akar: ' + rootsText;
+        document.getElementById('direction-display').textContent = a > 0 ? '↑ Terbuka ke atas (minimum)' : a < 0 ? '↓ Terbuka ke bawah (maksimum)' : '→ Bukan fungsi kuadrat';
+
+        if(chart) {
+            chart.data.datasets[0].data = generateData(a, b, c);
+            chart.data.datasets[1].data = [{ x: vx, y: vy }];
+            chart.data.datasets[2].data = symmetryAxisData(vx);
+            chart.update('none');
+        }
+    }
+
+    function animateGraph() {
+        const a = parseFloat(document.getElementById('input-a').value);
+        let step = 0, steps = 50;
+        const interval = setInterval(() => {
+            step++;
+            document.getElementById('input-a').value = 0.1 + (a - 0.1) * (step / steps);
+            updateGraph();
+            if (step >= steps) { clearInterval(interval); document.getElementById('input-a').value = a; updateGraph(); }
+        }, 30);
+    }
+
+    function resetGraph() {
+        ['input-a','input-b','input-c'].forEach((id,i) => document.getElementById(id).value = [1,0,0][i]);
+        updateGraph();
+    }
+
+    function calculate() {
+        const a = parseFloat(document.getElementById('calc-a').value) || 0;
+        const b = parseFloat(document.getElementById('calc-b').value) || 0;
+        const c = parseFloat(document.getElementById('calc-c').value) || 0;
+        document.getElementById('calc-equation').textContent = fmtEq(a, b, c);
+
+        const vx = a !== 0 ? -b/(2*a) : 0; const vy = a*vx*vx + b*vx + c;
+        document.getElementById('calc-vertex').textContent = `(${vx.toFixed(2)}, ${vy.toFixed(2)})`;
+        document.getElementById('calc-axis').textContent = `x = ${vx.toFixed(2)}`;
+
+        const h = vx.toFixed(2), k = vy.toFixed(2);
+        const hSign = vx >= 0 ? '−' : '+', hVal = Math.abs(vx).toFixed(2);
+        document.getElementById('calc-vertex-form').textContent = a !== 0 ? `Bentuk vertex: f(x) = ${a}(x ${hSign} ${hVal})² + ${k}` : '';
+
+        const D = b*b - 4*a*c;
+        document.getElementById('calc-disc').textContent = D.toFixed(2);
+
+        let rootsHtml = '', factorForm = '';
+        if (a === 0) { rootsHtml = '<span class="text-red-500">Bukan fungsi kuadrat (a = 0)</span>'; }
+        else if (D > 0) {
+            const r1 = (-b + Math.sqrt(D))/(2*a), r2 = (-b - Math.sqrt(D))/(2*a);
+            rootsHtml = `x₁ = ${r1.toFixed(2)}, x₂ = ${r2.toFixed(2)}`;
+            const s1 = r1 >= 0 ? '−' : '+', s2 = r2 >= 0 ? '−' : '+';
+            factorForm = `Bentuk faktor: f(x) = ${a}(x ${s1} ${Math.abs(r1).toFixed(2)})(x ${s2} ${Math.abs(r2).toFixed(2)})`;
+        } else if (D === 0) {
+            rootsHtml = `x = ${vx.toFixed(2)} (akar kembar)`;
+            const s = vx >= 0 ? '−' : '+';
+            factorForm = `Bentuk faktor: f(x) = ${a}(x ${s} ${Math.abs(vx).toFixed(2)})²`;
+        } else {
+            const re = (-b/(2*a)).toFixed(2), im = (Math.sqrt(-D)/(2*a)).toFixed(2);
+            rootsHtml = `<span class="text-gray-400">x = ${re} ± ${im}i (tidak real)</span>`;
+        }
+        document.getElementById('calc-roots').innerHTML = rootsHtml;
+        document.getElementById('calc-factor-form').textContent = factorForm;
+        document.getElementById('calc-yint').textContent = `(0, ${c})`;
+    }
+
+    function showSteps() {
+        const a = parseFloat(document.getElementById('calc-a').value) || 0;
+        const b = parseFloat(document.getElementById('calc-b').value) || 0;
+        const c = parseFloat(document.getElementById('calc-c').value) || 0;
+        const content = document.getElementById('steps-content');
+        const container = document.getElementById('steps-container');
+
+        if (a === 0) { content.innerHTML = '<p class="text-red-500 font-semibold">⚠️ Ini bukan fungsi kuadrat karena a = 0.</p>'; }
+        else {
+            const vx = -b/(2*a), vy = a*vx*vx + b*vx + c, D = b*b - 4*a*c;
+            let html = `
+            <div class="step-card border-l-4 border-blue-500">
+                <p class="font-bold text-blue-700 text-sm">1. Titik Puncak (Vertex)</p>
+                <p class="font-mono mt-1 text-xs">x = −b/2a = −(${b}) / (2×${a}) = <strong>${vx.toFixed(2)}</strong></p>
+                <p class="font-mono text-xs">y = f(${vx.toFixed(2)}) = ${a}(${vx.toFixed(2)})² + ${b}(${vx.toFixed(2)}) + ${c} = <strong>${vy.toFixed(2)}</strong></p>
+                <p class="font-bold text-blue-600 text-xs mt-1">→ Vertex: (${vx.toFixed(2)}, ${vy.toFixed(2)})</p>
+            </div>
+            <div class="step-card border-l-4 border-purple-500">
+                <p class="font-bold text-purple-700 text-sm">2. Diskriminan</p>
+                <p class="font-mono text-xs mt-1">D = b² − 4ac = (${b})² − 4(${a})(${c}) = <strong>${D.toFixed(2)}</strong></p>
+                <p class="text-xs mt-1 font-bold ${D > 0 ? 'text-green-600' : D === 0 ? 'text-blue-600' : 'text-red-600'}">
+                    ${D > 0 ? '✓ D > 0 → Dua akar real berbeda' : D === 0 ? '✓ D = 0 → Akar kembar' : '✗ D < 0 → Tidak ada akar real'}
+                </p>
+            </div>`;
+            if (D >= 0) {
+                const r1 = (-b + Math.sqrt(D))/(2*a), r2 = (-b - Math.sqrt(D))/(2*a);
+                html += `
+            <div class="step-card border-l-4 border-green-500">
+                <p class="font-bold text-green-700 text-sm">3. Akar-akar (Rumus ABC)</p>
+                <p class="font-mono text-xs mt-1">x₁ = (${-b} + √${D}) / ${2*a} = <strong>${r1.toFixed(2)}</strong></p>
+                <p class="font-mono text-xs">x₂ = (${-b} − √${D}) / ${2*a} = <strong>${r2.toFixed(2)}</strong></p>
+            </div>`;
+            }
+            html += `
+            <div class="step-card border-l-4 border-orange-400">
+                <p class="font-bold text-orange-700 text-sm">4. Titik Potong Sumbu-Y</p>
+                <p class="font-mono text-xs mt-1">f(0) = <strong>${c}</strong></p>
+            </div>`;
+            content.innerHTML = html;
+        }
+        container.classList.remove('hidden');
+        container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function sendToSimulasi() {
+        const a = parseFloat(document.getElementById('calc-a').value) || 0;
+        const b = parseFloat(document.getElementById('calc-b').value) || 0;
+        const c = parseFloat(document.getElementById('calc-c').value) || 0;
+        document.getElementById('input-a').value = Math.max(-5, Math.min(5, a));
+        document.getElementById('input-b').value = Math.max(-10, Math.min(10, b));
+        document.getElementById('input-c').value = Math.max(-10, Math.min(10, c));
+        const btn = document.querySelector('[data-tab="simulasi"]') || document.querySelectorAll('.nav-tab')[1];
+        switchTab('simulasi', btn);
+        updateGraph();
+        showToast('✓ Nilai dikirim ke Simulasi!', '#10b981');
+    }
+
+    const allQuizData = [
+        { question:"Grafik f(x) = x² − 6x + 9 memiliki titik puncak di...", options:["(3, 0)","(0, 9)","(-3, 0)","(6, 9)"], correct:0, explanation:"x = -b/2a = 6/2 = 3, f(3) = 9-18+9 = 0 → vertex (3, 0)" },
+        { question:"Nilai minimum f(x) = 2x² − 8x + 6 adalah...", options:["-2","0","2","-6"], correct:0, explanation:"x = 8/(2×2) = 2, f(2) = 8-16+6 = -2" },
+        { question:"Grafik yang terbuka ke bawah adalah...", options:["f(x) = x² + 2x + 1","f(x) = -2x² + 3x - 5","f(x) = 3x² - x + 2","f(x) = x²"], correct:1, explanation:"a = -2 < 0 → terbuka ke bawah" },
+        { question:"Akar-akar dari x² − 5x + 6 = 0 adalah...", options:["2 dan 3","-2 dan -3","1 dan 6","-1 dan -6"], correct:0, explanation:"(x-2)(x-3) = 0 → x = 2 atau x = 3" },
+        { question:"Diskriminan 2x² + 4x + 5 = 0 adalah...", options:["-24","24","56","-56"], correct:0, explanation:"D = 16 - 4(2)(5) = 16-40 = -24" }
+    ];
+
+    function shuffleArr(arr) { const a = [...arr]; for (let i = a.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; }
+
+    function initQuiz() {
+        shuffledQuiz = shuffleArr(allQuizData).slice(0, 5); currentQuizIndex = 0; quizScore = 0;
+        document.getElementById('total-questions').textContent = shuffledQuiz.length;
+        document.getElementById('quiz-score').textContent = '0';
+        document.getElementById('quiz-progress-fill').style.width = '0%';
+    }
+
+    function loadQuizQuestion() {
+        clearQuizTimer();
+        if (currentQuizIndex >= shuffledQuiz.length) { showQuizResult(); return; }
+        const q = shuffledQuiz[currentQuizIndex]; const container = document.getElementById('quiz-container'); const optOrder = shuffleArr([0,1,2,3]);
+        let html = `
+        <div class="slide-in" style="background:var(--card-bg);border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+            <p class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2">Soal ${currentQuizIndex+1} / ${shuffledQuiz.length}</p>
+            <h3 class="text-base font-bold mb-5 text-main leading-snug">${q.question}</h3>
+            <div class="space-y-2">`;
+        optOrder.forEach((orig, disp) => {
+            html += `<button onclick="checkAnswer(${orig},${q.correct})" class="quiz-option w-full text-left p-3 rounded-xl border-2 text-sm font-medium transition-all" style="border-color:var(--border);background:var(--input-bg);color:var(--text-main)" data-orig="${orig}"><span class="inline-flex w-7 h-7 rounded-full items-center justify-center text-xs font-bold mr-2 flex-shrink-0" style="background:rgba(99,102,241,0.1);color:#6366f1">${String.fromCharCode(65+disp)}</span>${q.options[orig]}</button>`;
+        });
+        html += '</div></div>'; container.innerHTML = html; document.getElementById('current-question').textContent = currentQuizIndex + 1;
+        document.getElementById('quiz-progress-fill').style.width = ((currentQuizIndex / shuffledQuiz.length) * 100) + '%';
+        startQuizTimer();
+    }
+
+    function startQuizTimer() {
+        quizTimeLeft = 20; updateTimerDisplay();
+        quizTimer = setInterval(() => {
+            quizTimeLeft--; updateTimerDisplay();
+            if (quizTimeLeft <= 0) { clearInterval(quizTimer); document.querySelectorAll('.quiz-option').forEach(btn => { btn.disabled = true; if (parseInt(btn.dataset.orig) === shuffledQuiz[currentQuizIndex].correct) btn.classList.add('correct-answer'); }); showQuizExplanation(false); }
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        document.getElementById('timer-display').textContent = quizTimeLeft;
+        const circ = document.getElementById('timer-circle'); const r = 9, circ_len = 2 * Math.PI * r;
+        circ.style.strokeDashoffset = circ_len - (quizTimeLeft / 20) * circ_len;
+        circ.style.stroke = quizTimeLeft > 10 ? '#667eea' : quizTimeLeft > 5 ? '#f59e0b' : '#ef4444';
+    }
+
+    function clearQuizTimer() { if (quizTimer) { clearInterval(quizTimer); quizTimer = null; } }
+
+    function checkAnswer(selectedOrig, correctOrig) {
+        clearQuizTimer(); const buttons = document.querySelectorAll('.quiz-option');
+        buttons.forEach(btn => { btn.disabled = true; const orig = parseInt(btn.dataset.orig); if (orig === correctOrig) btn.classList.add('correct-answer'); else if (orig === selectedOrig && orig !== correctOrig) btn.classList.add('wrong-answer'); });
+        const isCorrect = selectedOrig === correctOrig;
+        if (isCorrect) { quizScore += 20; totalXP += 10; localStorage.setItem('mathviz_xp', totalXP); document.getElementById('score-display').textContent = totalXP + ' XP'; document.getElementById('quiz-score').textContent = quizScore; createConfetti(); }
+        showQuizExplanation(isCorrect);
+    }
+
+    function showQuizExplanation(isCorrect) {
+        setTimeout(() => {
+            const container = document.getElementById('quiz-container'); const q = shuffledQuiz[currentQuizIndex];
+            const exp = document.createElement('div'); exp.className = 'slide-in mt-3 p-4 rounded-xl border-l-4 text-sm';
+            exp.style.cssText = isCorrect ? 'background:#f0fdf4;border-color:#10b981;' : 'background:#eff6ff;border-color:#3b82f6;';
+            exp.innerHTML = `<p class="font-bold mb-1" style="color:${isCorrect ? '#065f46' : '#1e40af'}">${isCorrect ? '✓ Benar!' : quizTimeLeft <= 0 ? '⏱ Waktu habis!' : '✗ Kurang tepat.'} Penjelasan:</p><p style="color:${isCorrect ? '#047857' : '#1d4ed8'}">${q.explanation}</p>`;
+            container.appendChild(exp);
+            const nextBtn = document.createElement('button'); nextBtn.className = 'mt-3 w-full py-3 rounded-xl font-bold text-sm text-white transition-all hover:shadow-lg'; nextBtn.style.background = 'linear-gradient(135deg,#667eea,#764ba2)';
+            nextBtn.innerHTML = currentQuizIndex < shuffledQuiz.length - 1 ? 'Soal Berikutnya <i class="fas fa-arrow-right ml-2"></i>' : 'Lihat Hasil <i class="fas fa-flag-checkered ml-2"></i>';
+            nextBtn.onclick = () => { currentQuizIndex++; loadQuizQuestion(); }; container.appendChild(nextBtn);
+        }, 600);
+    }
+
+    function showQuizResult() {
+        clearQuizTimer(); document.getElementById('quiz-progress-fill').style.width = '100%'; document.getElementById('quiz-container').classList.add('hidden'); document.getElementById('quiz-result').classList.remove('hidden');
+        const maxScore = shuffledQuiz.length * 20; document.getElementById('final-score').textContent = `${quizScore}/${maxScore}`;
+        const pct = quizScore / maxScore; const msgs = [[1,'Sempurna!'],[0.8,'Bagus sekali!'],[0.6,'Lumayan!'],[0,'Coba lagi!']];
+        document.getElementById('result-message').textContent = msgs.find(([t]) => pct >= t)[1];
+        saveHistory(quizScore, maxScore);
+    }
+
+    function restartQuiz() { initQuiz(); document.getElementById('quiz-container').classList.remove('hidden'); document.getElementById('quiz-result').classList.add('hidden'); loadQuizQuestion(); }
+
+    function saveHistory(score, maxScore) {
+        const history = JSON.parse(localStorage.getItem('mathviz_history') || '[]');
+        history.unshift({ date: new Date().toLocaleDateString('id-ID'), time: new Date().toLocaleTimeString('id-ID'), score, maxScore, xp: (score / maxScore) * 50 });
+        localStorage.setItem('mathviz_history', JSON.stringify(history.slice(0, 50)));
+    }
+
+    function renderHistory() {
+        const history = JSON.parse(localStorage.getItem('mathviz_history') || '[]');
+        const empty = document.getElementById('history-empty'); const table = document.getElementById('history-table'); const tbody = document.getElementById('history-tbody');
+        if (history.length === 0) { empty.classList.remove('hidden'); table.classList.add('hidden'); }
+        else {
+            empty.classList.add('hidden'); table.classList.remove('hidden');
+            const scores = history.map(h => h.score); const best = Math.max(...scores); const avg = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+            document.getElementById('stat-total-games').textContent = history.length; document.getElementById('stat-best-score').textContent = best; document.getElementById('stat-avg-score').textContent = avg;
+            tbody.innerHTML = history.map((h, i) => {
+                const pct = h.score / h.maxScore; let badge = '', rank = '';
+                if (i === 0 && h.score === best) { badge = 'badge-gold'; rank = '🥇'; } else if (pct >= 0.8) { badge = 'badge-silver'; rank = '⭐'; } else { badge = 'badge-normal'; rank = '→'; }
+                return `<tr class="history-row border-b border-theme text-xs"><td class="py-2 text-muted">${i+1}</td><td class="py-2 text-sub">${h.date}</td><td class="py-2 font-bold">${h.score}/${h.maxScore}</td><td class="py-2 font-bold text-indigo-500">+${h.xp} XP</td><td class="py-2"><span class="history-badge ${badge}">${rank}</span></td></tr>`;
+            }).join('');
+        }
+    }
+
+    function clearHistory() { if (confirm('Hapus riwayat?')) { localStorage.removeItem('mathviz_history'); renderHistory(); showToast('Riwayat dihapus', '#6b7280'); } }
+    function clearProgress() { if (confirm('Hapus XP?')) { localStorage.removeItem('mathviz_xp'); totalXP = 0; document.getElementById('score-display').textContent = '0 XP'; } }
+
+    function createParticle(x, y) { const p = document.createElement('div'); p.className = 'particle'; p.style.cssText = `left:${x}px;top:${y}px;width:7px;height:7px;background:hsl(${Math.random()*360},70%,60%)`; p.style.setProperty('--tx',(Math.random()-.5)*80+'px'); p.style.setProperty('--ty',(Math.random()-.5)*80+'px'); document.body.appendChild(p); setTimeout(()=>p.remove(),2500); }
+    function createConfetti() { for (let i = 0; i < 25; i++) { setTimeout(() => { const c = document.createElement('div'); c.className = 'confetti'; c.style.left = Math.random()*100+'vw'; c.style.top = '-10px'; c.style.background = `hsl(${Math.random()*360},70%,60%)`; c.style.animationDuration = (Math.random()*2+2)+'s'; document.body.appendChild(c); setTimeout(()=>c.remove(),4000); }, i*60); } }
+    function showToast(msg, color) { const t = document.createElement('div'); t.className = 'toast'; t.style.background = color; t.style.color = 'white'; t.innerHTML = msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 3000); }
+    function toggleHelp() { document.getElementById('help-modal').classList.toggle('hidden'); }
+
+    // ===================== C. ANIMASI BACKGROUND MATHVIZ =====================
+    (function() {
+        const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d'); let W, H, t = 0, animId;
+        function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; } resize(); window.addEventListener('resize', resize);
+        const parabolas = [
+            { a: 0.0018, ox: 0.15, phase: 0, speed: 0.0028, color: '#818cf8', alpha: 0.55, width: 1.8 }, { a: -0.0014,ox: 0.75, phase: 1.2, speed: 0.0022, color: '#a78bfa', alpha: 0.45, width: 1.5 },
+            { a: 0.0022, ox: 0.5, phase: 2.4, speed: 0.0035, color: '#38bdf8', alpha: 0.35, width: 1.4 }, { a: -0.002, ox: 0.35, phase: 3.6, speed: 0.0019, color: '#f472b6', alpha: 0.30, width: 1.3 },
+            { a: 0.0016, ox: 0.85, phase: 0.8, speed: 0.0031, color: '#34d399', alpha: 0.28, width: 1.2 }
+        ];
+        const stars = Array.from({ length: 120 }, () => ({ x: Math.random() * 1, y: Math.random() * 1, r: Math.random() * 1.4 + 0.3, phase: Math.random() * Math.PI * 2, speed: 0.008 + Math.random() * 0.015 }));
+        function getParabolaY(p, screenX, time) { const cx = p.ox * W + Math.sin(time * p.speed * 0.7 + p.phase) * 60; const baseY = H * 0.6 + Math.sin(time * p.speed * 0.5 + p.phase * 0.3) * 50; return baseY + p.a * (screenX - cx) * (screenX - cx); }
+        function draw() {
+            ctx.clearRect(0, 0, W, H); const isDark = document.documentElement.getAttribute('data-theme') === 'dark'; const bg = ctx.createLinearGradient(0, 0, W, H);
+            if (isDark) { bg.addColorStop(0, '#050510'); bg.addColorStop(0.5, '#0a0520'); bg.addColorStop(1, '#080318'); } else { bg.addColorStop(0, '#0d0a2e'); bg.addColorStop(0.5, '#130d3a'); bg.addColorStop(1, '#0a0628'); }
+            ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+            stars.forEach(s => { const brightness = 0.3 + 0.7 * (Math.sin(t * s.speed + s.phase) * 0.5 + 0.5); ctx.fillStyle = `rgba(255,255,255,${brightness * 0.85})`; ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r * (0.7 + brightness * 0.3), 0, Math.PI * 2); ctx.fill(); });
+            parabolas.forEach(p => {
+                const cx = p.ox * W + Math.sin(t * p.speed * 0.7 + p.phase) * 60; const steps = Math.ceil(W / 2);
+                ctx.beginPath(); ctx.strokeStyle = p.color; ctx.globalAlpha = p.alpha; ctx.lineWidth = p.width; ctx.shadowBlur = 12; ctx.shadowColor = p.color;
+                let started = false;
+                for (let i = 0; i <= steps; i++) { const x = (i / steps) * W; const y = getParabolaY(p, x, t); if (y < -200 || y > H + 200) { started = false; continue; } if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y); }
+                ctx.stroke(); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+            });
+            const symbols = ['y=ax²+bx+c', 'Δ=b²-4ac', 'x=-b/2a', 'f(x)', 'parabola'];
+            symbols.forEach((sym, i) => { const angle = (t * 0.003 + i * 1.26) % (Math.PI * 2); const rx = W * 0.42, ry = H * 0.42; const sx = W * 0.5 + Math.cos(angle) * rx; const sy = H * 0.5 + Math.sin(angle) * ry; ctx.font = 'italic 11px Times New Roman'; ctx.fillStyle = 'rgba(160,140,255,0.18)'; ctx.fillText(sym, sx, sy); });
+            t++; animId = requestAnimationFrame(draw);
+        }
+        draw();
+    })();
+
+    // ===================== D. INISIALISASI =====================
+    document.addEventListener('DOMContentLoaded', () => {
+        initChart(); updateGraph(); initQuiz(); loadQuizQuestion(); calculate();
+        document.addEventListener('click', e => { if (!e.target.closest('button') && !e.target.closest('input') && !e.target.closest('a')) { createParticle(e.clientX, e.clientY); } });
+    });
+    </script>
+</body>
+</html>
